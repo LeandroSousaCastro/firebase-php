@@ -31,11 +31,11 @@ foreach ($estacoes->data->list as $estacao) {
     curl_setopt($curl, CURLOPT_HTTPGET, true);
     $result = curl_exec($curl);
     curl_close($curl);
-    $dados_pcds = \json_decode($result);
+    $dados_pcds = \json_decode($result, true);
 
     $result = [];
 
-    if ($dados_pcds->data->total_results > 0) {
+    if ($dados_pcds['data']['total_results'] > 0) {
         $list = [];
         for ($dateFim; $dateFim >= $dateIni; $dateFim->modify(" - 1 hours ")) {
             $list[$dateFim->format("Y-m-d H:i:s")] = null;
@@ -48,43 +48,67 @@ foreach ($estacoes->data->list as $estacao) {
         $vinteQuatroHora = null;
 
         $date = new \DateTime();
-        $dataLastDate = new  \DateTime($dados_pcds->data->list[0]->data);
-        if ($date->format("Y-m-d H") == $dataLastDate->format("Y-m-d H")) {
-            $i = 1;
-            foreach ($dados_pcds->data->list as $dado_pcd) {
-                $list[$dado_pcd->data] = $dado_pcd->valor;
-                if ($i == 1) {
-                    $umahora = $dado_pcd->valor;
-                } else if ($i == 2) {
-                    $duashora = array_sum($list) / $i;
-                } else if ($i == 6) {
-                    $seishora = array_sum($list) / $i;
-                } else if ($i == 12) {
-                    $dozehora = array_sum($list) / $i;
-                }
-                $i++;
+        $i = 0;
+        $countNull = 0;
+        foreach (array_keys($list) as $data) {
+            $key = array_search($data, array_column($dados_pcds['data']['list'], 'data'));
+            if (!$key) {
+                $countNull++;
+            } else {
+                $list[$data] = $dados_pcds['data']['list'][$key]['valor'];
             }
+            if ($i == 0) {
+                $umahora = $list[$data];
+            } else if ($i == 1) {
+                if ($countNull <= 1) {
+                    $duashora = array_sum($list) / (2 - $countNull);
+                } else {
+                    $duashora = $umahora = $list[$data];
+                }
+            } else if ($i == 5) {
+                if ($countNull <= 5) {
+                    $seishora = array_sum($list) / (6 - $countNull);
+                } else {
+                    $seishora = $umahora = $list[$data];
+                }
+            } else if ($i == 11) {
+                if ($countNull <= 11) {
+                    $dozehora = array_sum($list) / (12 - $countNull);
+                } else {
+                    $dozehora = $umahora = $list[$data];
+                }
+            }
+            $i++;
+        }
 
-            $vinteQuatroHora = array_sum($list) / 24;
+        $vinteQuatroHora = array_sum($list) / (24 - $countNull);
+   
+        unset($list);
+        unset($dados_pcds);
 
-            unset($list);
-
-            $result = $pcd->update([
-                $estacao->id => [
-                    'nome' => $nome,
-                    'update_at' => $date->format("d/m/Y H:i:s") . " (UTC)",
-                    'dados' => [
-                        1 => number_format(round($umahora, 1), 1,'.',','),
-                        2 => number_format(round($duashora, 1), 1,'.',','),
-                        6 => number_format(round($seishora, 1), 1,'.',','),
-                        12 => number_format(round($dozehora, 1), 1,'.',','),
-                        24 => number_format(round($vinteQuatroHora, 1), 1,'.',',')
-                    ]
+        $result = $pcd->update([
+            $estacao->id => [
+                'nome' => $nome,
+                'update_at' => $date->format("d/m/Y H:i:s") . " (UTC)",
+                'dados' => [
+                    1 => ($umahora) ? number_format(round($umahora, 1), 1, '.', ',') : null,
+                    2 => ($duashora) ? number_format(round($duashora, 1), 1, '.', ','): null,
+                    6 => ($seishora) ? number_format(round($seishora, 1), 1, '.', ',') : null,
+                    12 => ($dozehora) ? number_format(round($dozehora, 1), 1, '.', ',') : null,
+                    24 => ($vinteQuatroHora) ? number_format(round($vinteQuatroHora, 1), 1, '.', ',') : null
                 ]
-            ]);
-            var_dump($result);
-        } else {
-            var_dump("Estação ainda não atualizou no banco de dados.");
+            ]
+        ]);
+        var_dump($result);
+    }
+}
+
+function recursive_array_search($needle,$haystack) {
+    foreach($haystack as $key=>$value) {
+        $current_key=$key;
+        if($needle===$value OR (is_array($value) && recursive_array_search($needle,$value) !== false)) {
+            return $current_key;
         }
     }
+    return false;
 }
