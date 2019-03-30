@@ -72,7 +72,7 @@ foreach ($estacoes->data->list as $estacao) {
             $result = $pcd->update([
                 $estacao->id => [
                     'nome' => $nome,
-                    'update_at' => $date->format("d/m/Y H:i:s"),
+                    'update_at' => $date->format("d/m/Y H:i:s") . " (UTC)",
                     'dados' => [
                         1 => number_format(round($umahora, 1), 1,'.',','),
                         2 => number_format(round($duashora, 1), 1,'.',','),
