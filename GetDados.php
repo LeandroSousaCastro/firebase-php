@@ -34,6 +34,7 @@ foreach ($estacoes->data->list as $estacao) {
     $dados_pcds = \json_decode($result);
 
     $result = [];
+
     if ($dados_pcds->data->total_results > 0) {
         $list = [];
         for ($dateFim; $dateFim >= $dateIni; $dateFim->modify(" - 1 hours ")) {
@@ -57,7 +58,7 @@ foreach ($estacoes->data->list as $estacao) {
                 $seishora = array_sum($list) / $i;
             } else if ($i == 12) {
                 $dozehora = array_sum($list) / $i;
-            } else if ($i == 24) {
+            } else if ($i == $dados_pcds->data->total_results) {
                 $vinteQuatroHora = array_sum($list) / $i;
             }
             $i++;
@@ -69,7 +70,7 @@ foreach ($estacoes->data->list as $estacao) {
         $result = $pcd->update([
             $estacao->id => [
                 'nome' => $nome,
-                'update_at' => $date->format("Y-m-d H:i:s"),
+                'update_at' => $date->format("d/m/Y H:i:s"),
                 'dados' => [
                     1 => round($umahora, 1),
                     2 => round($duashora, 1),
