@@ -47,40 +47,44 @@ foreach ($estacoes->data->list as $estacao) {
         $dozehora = null;
         $vinteQuatroHora = null;
 
-        $i = 1;
-        foreach ($dados_pcds->data->list as $dado_pcd) {
-            $list[$dado_pcd->data] = $dado_pcd->valor;
-            if ($i == 1) {
-                $umahora = $dado_pcd->valor;
-            } else if ($i == 2) {
-                $duashora = array_sum($list) / $i;
-            } else if ($i == 6) {
-                $seishora = array_sum($list) / $i;
-            } else if ($i == 12) {
-                $dozehora = array_sum($list) / $i;
-            } else if ($i == $dados_pcds->data->total_results) {
-                $vinteQuatroHora = array_sum($list) / $i;
-            }
-            $i++;
-        }
-
-        unset($list);
-
         $date = new \DateTime();
-        $result = $pcd->update([
-            $estacao->id => [
-                'nome' => $nome,
-                'update_at' => $date->format("d/m/Y H:i:s"),
-                'dados' => [
-                    1 => round($umahora, 1),
-                    2 => round($duashora, 1),
-                    6 => round($seishora, 1),
-                    12 => round($dozehora, 1),
-                    24 => round($vinteQuatroHora, 1),
+        $dataLastDate = new  \DateTime($dados_pcds->data->list[0]->data);
+        if ($date->format("Y-m-d H") == $dataLastDate->format("Y-m-d H")) {
+            $i = 1;
+            foreach ($dados_pcds->data->list as $dado_pcd) {
+                $list[$dado_pcd->data] = $dado_pcd->valor;
+                if ($i == 1) {
+                    $umahora = $dado_pcd->valor;
+                } else if ($i == 2) {
+                    $duashora = array_sum($list) / $i;
+                } else if ($i == 6) {
+                    $seishora = array_sum($list) / $i;
+                } else if ($i == 12) {
+                    $dozehora = array_sum($list) / $i;
+                }
+                $i++;
+            }
+
+            $vinteQuatroHora = array_sum($list) / 24;
+
+            unset($list);
+
+            $result = $pcd->update([
+                $estacao->id => [
+                    'nome' => $nome,
+                    'update_at' => $date->format("d/m/Y H:i:s"),
+                    'dados' => [
+                        1 => number_format(round($umahora, 1), 1,'.',','),
+                        2 => number_format(round($duashora, 1), 1,'.',','),
+                        6 => number_format(round($seishora, 1), 1,'.',','),
+                        12 => number_format(round($dozehora, 1), 1,'.',','),
+                        24 => number_format(round($vinteQuatroHora, 1), 1,'.',',')
+                    ]
                 ]
-            ]
-        ]);
-        var_dump($result);
+            ]);
+            var_dump($result);
+        } else {
+            var_dump("Estação ainda não atualizou no banco de dados.");
+        }
     }
 }
-
